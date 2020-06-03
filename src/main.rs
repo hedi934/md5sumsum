@@ -1,5 +1,7 @@
 extern crate walkdir;
 use std::{env, process::Command};
+extern crate md5;
+use rayon::prelude::*;
 
 fn main() {
     let mut paths: Vec<String> = vec![];
@@ -12,16 +14,14 @@ fn main() {
             paths.push(String::from(entry.path().to_string_lossy()))
         }
     }
-    let mut hashcat = String::from("");
-    for f in paths {
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(format!("md5sum \"{}\"", f));
-        let output = String::from_utf8_lossy(&cmd.output().unwrap().stdout).to_string();
-        let vec: Vec<&str> = output.split(" ").collect();
-        hashcat += vec[0];
-    }
-    let mut cmd = Command::new("sh");
-    cmd.arg("-c").arg(format!("echo \"{}\" | md5sum", hashcat));
-    let output = String::from_utf8_lossy(&cmd.output().unwrap().stdout).to_string();
-    print!("{}", output);
+
+    paths.sort_by(|one, two| one.to_lowercase().cmp(&two.to_lowercase()));	
+
+    let mut path = String::new();
+
+    path = paths.par_iter().map(|s| format!("{:x}", md5::compute(s))).collect::<Vec<String>>().join("");
+
+    let f = md5::compute(path);
+    let otp = &format!("{:x}", f);
+    print!("{}", otp);
 }
